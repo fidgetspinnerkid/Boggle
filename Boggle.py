@@ -6,7 +6,6 @@ from random import randint
 from itertools import product
 from multiprocessing import Pool
 from functools import partial
-import time
 
 # Puts the dict into a set and a list.
 # Set allows for O(1) lookup.
