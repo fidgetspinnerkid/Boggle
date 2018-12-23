@@ -1,6 +1,5 @@
 """
 Boggle Game and Solver
-Multithreading
 """
 
 from random import randint
