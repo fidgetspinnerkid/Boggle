@@ -1,13 +1,25 @@
-'''
-Solvin' Boggle yea
-'''
+"""
+Boggle Game and Solver
+Multithreading
+"""
 
 from random import randint
 from itertools import product
+from multiprocessing import Pool
+from functools import partial
+import time
+
+# Puts the dict into a set and a list.
+# Set allows for O(1) lookup.
+# List allows for use of indexes to split it up for multiprocessing later.
+with open('boggleDict.txt', 'r') as wordstxt:
+    words_set = frozenset([x[:-1] for x in wordstxt.readlines()])
+    words_lst = list(words_set)
+
 
 def roll_boggle_die():
-    ''' generates a list of random letters
-        returns a list of random letters'''
+    """generates a list of random letters
+        returns a list of random letters"""
     dieSides = ['AAEEGN',
                 'ELRTTY',
                 'AOOTTW',
@@ -27,7 +39,7 @@ def roll_boggle_die():
     randIntList = []
 
     for x in range(16):
-        randIntList.append(randint(0,5))
+        randIntList.append(randint(0, 5))
 
     dieSidesGame = []
     for x in range(16):
@@ -35,16 +47,18 @@ def roll_boggle_die():
 
     return dieSidesGame
 
+
 def order_letters(listToOrder):
-    ''' orders a list of random letters to form a boggle board
-        no return'''
-    for x in range(3,19,4):
-        print(listToOrder[x-3]+ ' ' + listToOrder[x-2]+ ' '+ listToOrder[x-1]+ ' ' + listToOrder[x])
+    """ orders a list of random letters to form a boggle board
+        no return"""
+    for x in range(3, 19, 4):
+        print(listToOrder[x - 3] + ' ' + listToOrder[x - 2] + ' ' + listToOrder[x - 1] + ' ' + listToOrder[x])
+
 
 def find_score(listOfWords):
-    ''' returns a list of scores based on a list of words
-        listOfWords --> totalScores'''
-    scores = {3 : 1, 4 : 1, 5 : 2, 6 : 3, 7 : 5, 8 : 11, 9 : 11, 10 : 11, 11:11, 12:11, 13:11, 14:11, 15:11, 16:11}
+    """returns a list of scores based on a list of words
+        listOfWords --> totalScores"""
+    scores = {3: 1, 4: 1, 5: 2, 6: 3, 7: 5, 8: 11, 9: 11, 10: 11, 11: 11, 12: 11, 13: 11, 14: 11, 15: 11, 16: 11}
     totalScores = []
 
     for word in listOfWords:
@@ -52,9 +66,10 @@ def find_score(listOfWords):
 
     return totalScores
 
+
 def spot_adjacent(spot1, spot2):
-    '''checks if 2 spots are adjacent
-       returns True or False'''
+    """checks if 2 spots are adjacent
+       returns True or False"""
     adjacentSpots = {1: [2, 5, 6],
                      2: [1, 3, 5, 6, 7],
                      3: [8, 2, 4, 6, 7],
@@ -76,10 +91,11 @@ def spot_adjacent(spot1, spot2):
         return True
     else:
         return False
-    
+
+
 def index_letter(letter, gridx):
-    '''returns the spots in which a letter is in a grid
-       returns -1 if not in grid'''
+    """returns the spots in which a letter is in a grid
+       returns -1 if not in grid"""
     letterInGrid = []
 
     for x in range(gridx.count(letter)):
@@ -87,39 +103,44 @@ def index_letter(letter, gridx):
         gridx.insert(gridx.index(letter), 0)
         gridx.remove(letter)
 
-    if letterInGrid != []:
+    if letterInGrid:
 
-        for n,i in enumerate(gridx):
-            if i==0:
-                gridx[n]=letter
+        for n, i in enumerate(gridx):
+            if i == 0:
+                gridx[n] = letter
 
         return letterInGrid
     else:
         return -1
 
+
 def valid_path(path):
-    '''checks if a patha of spots in a grid are valid
-       returns True or False'''
+    """checks if a patha of spots in a grid are valid
+       returns True or False"""
 
     for i, spot in enumerate(path):
 
         if path.count(spot) >= 2:
             return False
 
-        elif i+1 == len(path):
+        elif i + 1 == len(path):
             continue
 
-        elif not spot_adjacent(spot+1, path[i+1]+1):
+        elif not spot_adjacent(spot + 1, path[i + 1] + 1):
             return False
 
     return True
 
-def word_in_grid(word,grid):
-    '''checks if a word is in a boggle grid
-    returns True or False'''
+
+def word_in_grid(word, grid):
+    """checks if a word is in a boggle grid
+    returns True or False"""
+
     indexWord = []
 
+    word = word.upper()
     for letter in word:
+
         if index_letter(letter, grid) == -1:
             return False
 
@@ -131,45 +152,46 @@ def word_in_grid(word,grid):
 
     return False
 
-def in_list(word, file):
-    '''checks if a word is in a file
-       returns True or False'''
+
+def in_list(word):
+    """checks if a word is in a file
+       returns True or False"""
     word = word.lower()
 
-    wordFile = open(file, 'r')
-
-    for line in wordFile:
-        if line[:-1] == word:
-            word = word.upper()
-            wordFile.close()
-            return True
-
-    word = word.upper()
-    wordFile.close
+    if word in words_set:
+        return True
 
     return False
 
-def play_boggle():
-    ''' plays a game of boggle'''
-    letterList = roll_boggle_die()
-    tempLetterList = []
 
-    for element in letterList:
-        tempLetterList.append(element)
+def find_longest_word(letterList):
+    return max(all_valid_words(letterList), key=len)
+
+
+def all_valid_words(letterList):
+    with Pool(3) as p:
+        results = p.map(partial(word_in_grid, grid=letterList), words_lst)
+
+    return [s[1] for s in list(filter(lambda s: results[s[0]], enumerate(words_lst)))]
+
+
+def play_boggle():
+    """plays a game of boggle"""
+    letterList = roll_boggle_die()
 
     wordsFound = []
 
     End = False
-
     while not End:
         order_letters(letterList)
+
         wordToCheck = input("Enter your word(leave blank to quit) : ").upper()
 
         if wordToCheck == "":
             End = True
             continue
 
-        elif len(wordToCheck)<3:
+        elif len(wordToCheck) < 3:
             print("Your word must be at least 3 letters long.")
             continue
 
@@ -177,7 +199,7 @@ def play_boggle():
             print(wordToCheck + " is not on the grid.")
             continue
 
-        elif not in_list(wordToCheck, 'boggleDict.txt'):
+        elif not in_list(wordToCheck):
             print(wordToCheck + " is not a valid word.")
             continue
 
@@ -194,25 +216,18 @@ def play_boggle():
     total = 0
 
     for i, word in enumerate(wordsFound):
-
         print(word + " is worth " + str(scores[i]))
         total += scores[i]
 
     print("Your total score is " + str(total))
-    print("I bet I can find the longest word!")
-    print("This will take a moment...")
+    print("I bet I can find the longest word...")
 
-    wordFile = open('boggleDict.txt', 'r')
-    longestWord = ''
-    for line in wordFile:
+    longest_word = find_longest_word(letterList)
 
-        if word_in_grid(line[:-1].upper(), letterList):
-            if len(line[:-1]) > len(longestWord):
-                longestWord = line[:-1]
-
-    print("I found " + longestWord + "!")
-    wordFile.close
+    print("I found " + longest_word + "!")
+    print("You found " + str(len(wordsFound)) + " out of " + str(len(all_valid_words(letterList))) + " possible words!")
     print("THANKS FOR PLAYING!")
+
 
 if __name__ == "__main__":
     play_boggle()
