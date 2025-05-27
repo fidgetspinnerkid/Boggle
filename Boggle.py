@@ -163,7 +163,17 @@ def in_list(word):
 
 
 def find_longest_word(letterList):
-    return max(all_valid_words(letterList), key=len)
+    """Return the longest valid word for the given board.
+
+    If no valid words exist an empty string is returned instead of raising a
+    ``ValueError``.
+    """
+
+    valid_words = all_valid_words(letterList)
+    if not valid_words:
+        return ""
+
+    return max(valid_words, key=len)
 
 
 def all_valid_words(letterList):
